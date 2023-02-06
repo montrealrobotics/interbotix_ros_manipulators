@@ -2,7 +2,6 @@
 
 [![View Documentation](https://trossenrobotics.com/docs/docs_button.svg)](https://docs.trossenrobotics.com/interbotix_xsarms_docs)
 
-![xsarm_banner](images/xsarm_banner.png)
 
 ## Overview
 
@@ -17,7 +16,6 @@ Finally, there is also an **examples** directory containing various demos of how
 
 ## IRROS Structure
 Refer [here](https://github.com/Interbotix/interbotix_ros_core#code-structure) to get a general understanding of IRROS.
-![xsarm_irros_structure](images/xsarm_irros_structure.png)
 
 ##### Hardware Layer
 All X-Series arms are made up of [X-Series Dynamixel servos](https://www.trossenrobotics.com/dynamixel-x-series-robot-servos). Each servo has two 3-pin JST ports that allows it to be daisy chained with other servos using 3-pin cables. The 'root' Dynamixel (i.e. the 'waist' motor) then connects to the [XM/XL motor power hub](https://www.trossenrobotics.com/3-pin-x-series-power-hub.aspx). Besides for providing 12V to the motors from the barrel jack, the hub also connects to the 3-pin JST port on the [U2D2](https://www.trossenrobotics.com/dynamixel-u2d2.aspx). This device acts as a communication interface between a computer (connected via microUSB cable) and the motors - converting USB/TTL signals back and forth.
