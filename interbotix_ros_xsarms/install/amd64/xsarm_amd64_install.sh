@@ -17,13 +17,14 @@ RRE="${NORM}${OFF}"
 
 PROMPT="> "
 
-ALL_VALID_DISTROS=('melodic' 'noetic' 'galactic' 'humble' 'rolling')
+ALL_VALID_DISTROS=('melodic' 'noetic' 'galactic' 'humble' 'jazzy' 'rolling')
 ROS1_VALID_DISTROS=('melodic' 'noetic')
-ROS2_VALID_DISTROS=('galactic' 'humble' 'rolling')
+ROS2_VALID_DISTROS=('galactic' 'humble' 'jazzy' 'rolling')
 
 BIONIC_VALID_DISTROS=('melodic')
 FOCAL_VALID_DISTROS=('noetic' 'galactic')
 JAMMY_VALID_DISTROS=('humble' 'rolling')
+NOBLE_VALID_DISTROS=('jazzy')
 
 NONINTERACTIVE=false
 DISTRO_SET_FROM_CL=false
@@ -145,7 +146,13 @@ function check_ubuntu_version() {
         failed "Chosen ROS distribution '$ROS_DISTRO_TO_INSTALL' is not supported on Ubuntu ${UBUNTU_VERSION}."
       fi
       ;;
-
+    24.04 )
+      if contains_element "$ROS_DISTRO_TO_INSTALL" "${NOBLE_VALID_DISTROS[@]}"; then
+        PY_VERSION=3
+      else
+        failed "Chosen ROS distribution '$ROS_DISTRO_TO_INSTALL' is not supported on Ubuntu ${UBUNTU_VERSION}."
+      fi
+      ;;
     *)
       failed "Something went wrong. UBUNTU_VERSION='$UBUNTU_VERSION', should be 18.04, 20.04, or 22.04."
       ;;
@@ -361,6 +368,7 @@ function setup_env_vars() {
   # Set up Environment Variables
   if [ -z "$ROS_IP" ]; then
     echo -e "${GRN}Setting up Environment Variables...${OFF}"
+    echo "# Interbotix Configurations" >> ~/.bashrc
     echo 'export ROS_IP=$(echo `hostname -I | cut -d" " -f1`)' >> ~/.bashrc
     echo -e 'if [ -z "$ROS_IP" ]; then\n\texport ROS_IP=127.0.0.1\nfi' >> ~/.bashrc
   else
@@ -397,6 +405,8 @@ if [ "$DISTRO_SET_FROM_CL" = false ]; then
     ROS_DISTRO_TO_INSTALL="noetic"
   elif [ "$UBUNTU_VERSION" == "22.04" ]; then
     ROS_DISTRO_TO_INSTALL="humble"
+  elif [ "$UBUNTU_VERSION" == "24.04" ]; then
+    ROS_DISTRO_TO_INSTALL="jazzy"
   else
     echo -e "${BOLD}${RED}Unsupported Ubuntu version: $UBUNTU_VERSION.${NORM}${OFF}"
     failed "Interbotix Arm only works with Ubuntu 18.04 Bionic, 20.04 Focal, or 22.04 Jammy on your hardware."
