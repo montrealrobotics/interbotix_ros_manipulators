@@ -154,7 +154,7 @@ function check_ubuntu_version() {
       fi
       ;;
     *)
-      failed "Something went wrong. UBUNTU_VERSION='$UBUNTU_VERSION', should be 18.04, 20.04, or 22.04."
+      failed "Something went wrong. UBUNTU_VERSION='$UBUNTU_VERSION', should be 18.04, 20.04, 22.04, or 24.04."
       ;;
 
   esac
@@ -164,14 +164,24 @@ function install_essential_packages() {
   # Install necessary core packages
   sudo apt-get install -yq curl git
   if [ "$ROS_VERSION_TO_INSTALL" == 2 ]; then
-    sudo pip3 install transforms3d
+    if [ "$UBUNTU_VERSION" == "24.04" ]; then
+      # Ubuntu 24.04 blocks system-wide pip installs (PEP 668), use the apt package instead
+      sudo apt-get install -yq python3-transforms3d
+    else
+      sudo pip3 install transforms3d
+    fi
   fi
   if [ $PY_VERSION == 2 ]; then
     sudo apt-get install -yq python-pip
     python -m pip install modern_robotics
   elif [ $PY_VERSION == 3 ]; then
     sudo apt-get install -yq python3-pip
-    python3 -m pip install modern_robotics
+    if [ "$UBUNTU_VERSION" == "24.04" ]; then
+      # modern_robotics is not packaged in apt, so allow pip to install it to the user site
+      python3 -m pip install --user --break-system-packages modern_robotics
+    else
+      python3 -m pip install modern_robotics
+    fi
   else
     failed "Something went wrong. PY_VERSION='$PY_VERSION', should be 2 or 3."
   fi
@@ -304,6 +314,11 @@ function install_ros2() {
       mkdir -p "$APRILTAG_WS"/src
       cd "$APRILTAG_WS"/src
       git clone -b ros2-port https://github.com/Interbotix/apriltag_ros.git
+      if [ "$ROS_DISTRO_TO_INSTALL" == "jazzy" ]; then
+        # Jazzy removed the deprecated .h headers, switch to the .hpp equivalents
+        grep -rlE '(cv_bridge/cv_bridge|image_geometry/pinhole_camera_model|tf2_geometry_msgs/tf2_geometry_msgs)\.h"' apriltag_ros | \
+          xargs -r sed -i -E 's#(cv_bridge/cv_bridge|image_geometry/pinhole_camera_model|tf2_geometry_msgs/tf2_geometry_msgs)\.h"#\1.hpp"#'
+      fi
       cd "$APRILTAG_WS"
       rosdep install --from-paths src --ignore-src -r -y
       # cmake-args flags disables warnings as errors unrelated to ROS
@@ -328,9 +343,17 @@ function install_ros2() {
     cd "$INSTALL_PATH"/src
     git clone -b "$ROS_DISTRO_TO_INSTALL" https://github.com/Interbotix/interbotix_ros_core.git
     git clone -b "$ROS_DISTRO_TO_INSTALL" https://github.com/Interbotix/interbotix_ros_manipulators.git
-    git clone -b "$ROS_DISTRO_TO_INSTALL" https://github.com/Interbotix/interbotix_ros_toolboxes.git
+    if [ "$ROS_DISTRO_TO_INSTALL" == "jazzy" ]; then
+      # Our fork's jazzy branch carries fixes for building against current Jazzy releases
+      git clone -b jazzy https://github.com/montrealrobotics/interbotix_ros_toolboxes.git
+    else
+      git clone -b "$ROS_DISTRO_TO_INSTALL" https://github.com/Interbotix/interbotix_ros_toolboxes.git
+    fi
     # TODO(lsinterbotix) remove below when moveit_visual_tools is available in apt repo
-    git clone -b ros2 https://github.com/ros-planning/moveit_visual_tools.git
+    # Jazzy ships moveit_visual_tools in apt, so rosdep installs it instead
+    if [ "$ROS_DISTRO_TO_INSTALL" != "jazzy" ]; then
+      git clone -b ros2 https://github.com/ros-planning/moveit_visual_tools.git
+    fi
     if [ "$INSTALL_PERCEPTION" = true ]; then
       rm                                                                                                \
         interbotix_ros_manipulators/interbotix_ros_xsarms/interbotix_xsarm_perception/COLCON_IGNORE     \
@@ -409,7 +432,7 @@ if [ "$DISTRO_SET_FROM_CL" = false ]; then
     ROS_DISTRO_TO_INSTALL="jazzy"
   else
     echo -e "${BOLD}${RED}Unsupported Ubuntu version: $UBUNTU_VERSION.${NORM}${OFF}"
-    failed "Interbotix Arm only works with Ubuntu 18.04 Bionic, 20.04 Focal, or 22.04 Jammy on your hardware."
+    failed "Interbotix Arm only works with Ubuntu 18.04 Bionic, 20.04 Focal, 22.04 Jammy, or 24.04 Noble on your hardware."
   fi
 fi
 
